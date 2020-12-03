@@ -4,29 +4,140 @@
 #include <stdlib.h>
 #include "lcd.h"
 
+void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
+
+void small_delay() {
+    nano_wait(1000000); // wait one millisecond
+}
+
 void setup_tim17()
 {
-    // Set this to invoke the ISR 100 times per second.
+    // Enable the RCC clock for TIM17
+    RCC -> APB2ENR |= RCC_APB2ENR_TIM17EN;
+    // Set the prescaler and auto-reload register to result in a timer update event
+    // exactly 100 times per second
+    TIM17 -> PSC = 4800 - 1;
+    TIM17 -> ARR = 100 - 1;
+    // Enable the UIE bit in the DIER
+    TIM17 -> DIER |= TIM_DIER_UIE;
+    // Enable the timer
+    TIM17 -> CR1 |= TIM_CR1_CEN;
+    // Enable the Timer 17 interrupt in the NVIC ISER
+    NVIC -> ISER[0] = (1 << TIM17_IRQn);
 }
 
 void setup_portb()
 {
     // Enable Port B.
+    RCC -> AHBENR |= RCC_AHBENR_GPIOBEN;
     // Set PB0-PB3 for output.
+    GPIOB -> MODER &= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2 | GPIO_MODER_MODER3);
+    GPIOB -> MODER |= (GPIO_MODER_MODER0_0 |GPIO_MODER_MODER1_0 | GPIO_MODER_MODER2_0 | GPIO_MODER_MODER3_0);
     // Set PB4-PB7 for input and enable pull-down resistors.
-    // Turn on the output for the lower row.
+    GPIOB -> MODER &= ~(GPIO_MODER_MODER4 | GPIO_MODER_MODER5 | GPIO_MODER_MODER6 | GPIO_MODER_MODER7);
+    GPIOB -> PUPDR &= ~(GPIO_PUPDR_PUPDR4 | GPIO_PUPDR_PUPDR5 | GPIO_PUPDR_PUPDR6 | GPIO_PUPDR_PUPDR7);
+    GPIOB -> PUPDR |= (GPIO_PUPDR_PUPDR4_1 | GPIO_PUPDR_PUPDR5_1 | GPIO_PUPDR_PUPDR6_1 | GPIO_PUPDR_PUPDR7_1);
+    // Turn on the output for the lower row (Row 4 -> PB3)
+    GPIOB -> ODR |= GPIO_ODR_3;
+}
+
+// For 7 segment displays
+void setup_portc()
+{
+    // Enable Port C
+    RCC -> AHBENR |= RCC_AHBENR_GPIOCEN;
+    // Configure pins PC0 – PC10 to be outputs
+    GPIOC -> MODER &= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2
+            | GPIO_MODER_MODER3 | GPIO_MODER_MODER4 | GPIO_MODER_MODER5 | GPIO_MODER_MODER6
+            | GPIO_MODER_MODER7 | GPIO_MODER_MODER8 | GPIO_MODER_MODER9 | GPIO_MODER_MODER10);
+    GPIOC -> MODER |= (GPIO_MODER_MODER0_0 | GPIO_MODER_MODER1_0 | GPIO_MODER_MODER2_0
+            | GPIO_MODER_MODER3_0 | GPIO_MODER_MODER4_0 | GPIO_MODER_MODER5_0 | GPIO_MODER_MODER6_0
+            | GPIO_MODER_MODER7_0 | GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0 | GPIO_MODER_MODER10_0);
+}
+
+void set_display(char * display) {
+    for (int off = 0; off < 8; off++) {
+        GPIOC -> ODR = (off << 8) | get_display_code(display[off]);
+        small_delay(); // wait one millisecond to let number display
+    }
+}
+
+// Not as efficient as a dictionary/hashtable but should be fine?
+int get_display_code(char letter) {
+    if (letter == '1') {
+        return 0x6;
+    } else if (letter == '2') {
+        return 0x5b;
+    } else if (letter == '3') {
+        return 0x4f;
+    } else if (letter == '4') {
+        return 0x66;
+    } else if (letter == '5') {
+        return 0x6d;
+    } else if (letter == '6') {
+        return 0x7d;
+    } else if (letter == '7') {
+        return 0x7;
+    } else if (letter == '8') {
+        return 0x7f;
+    } else if (letter == '9') {
+        return 0x67;
+    } else if (letter == 'g') {
+        return 0x6f;
+    } else if (letter == 'a') {
+        return 0x77;
+    } else if (letter == 'm') {
+        return 0x15;
+    } else if (letter == 'e') {
+        return 0x79;
+    } else if (letter == 'o') {
+        return 0x5c;
+    } else if (letter == 'v') {
+        return 0x1c;
+    } else if (letter == 'r') {
+        return 0x50;
+    }
+    return 0; // no matching character
 }
 
 char check_key()
 {
     // If the '*' key is pressed, return '*'
+    if (((GPIOB -> IDR) & (1 << 4)) > 0) {
+        return '*';
+    }
     // If the 'D' key is pressed, return 'D'
+    if (((GPIOB -> IDR) & (1 << 7)) > 0) {
+        return 'D';
+    }
     // Otherwise, return 0
+    return 0;
 }
 
 void setup_spi1()
 {
-    // Use setup_spi1() from lab 8.
+    // Enable the RCC clock to GPIO Port A
+    RCC -> AHBENR |= RCC_AHBENR_GPIOAEN;
+    // Configure pins PA4, PA5, and PA7 for alternate function 0
+    GPIOA -> MODER &= ~(GPIO_MODER_MODER4 | GPIO_MODER_MODER5 | GPIO_MODER_MODER7);
+    GPIOA -> MODER |= (GPIO_MODER_MODER4_1 | GPIO_MODER_MODER5_1 | GPIO_MODER_MODER7_1);
+    GPIOA -> AFR[0] &= ~(GPIO_AFRL_AFR4 | GPIO_AFRL_AFR5 | GPIO_AFRL_AFR7);
+    // Configure pins PA2 and PA3 to be outputs
+    GPIOA -> MODER &= ~(GPIO_MODER_MODER2 | GPIO_MODER_MODER3);
+    GPIOA -> MODER |= (GPIO_MODER_MODER2_0 | GPIO_MODER_MODER3_0);
+    // Enable the RCC clock to SPI1
+    RCC -> APB2ENR |= RCC_APB2ENR_SPI1EN;
+    // Configure SPI1 for Master/Bidimode/BidiOE, but set the baud rate as high as possible
+    SPI1 -> CR1 |= (SPI_CR1_MSTR | SPI_CR1_BIDIMODE | SPI_CR1_BIDIOE);
+    SPI1 -> CR1 &= ~(SPI_CR1_BR);
+    // Set SSOE/NSSP as you did for SPI2, but leave the word size set to 8-bit (the default)
+    SPI1 -> CR2 = SPI_CR2_SSOE | SPI_CR2_NSSP;
+    // Enable the SPI channel
+    SPI1 -> CR1 |= SPI_CR1_SPE;
 }
 
 // Copy a subset of a large source picture into a smaller destination.
@@ -116,6 +227,8 @@ int vx,vy; // Velocity components of ball
 int px; // Center of paddle offset
 int newpx; // New center of paddle
 
+char * display[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+
 // This C macro will create an array of Picture elements.
 // Really, you'll just use it as a pointer to a single Picture
 // element with an internal pix2[] array large enough to hold
@@ -204,6 +317,7 @@ void TIM17_IRQHandler(void)
 int main(void)
 {
     setup_portb();
+    setup_portc();
     setup_spi1();
     LCD_Init();
 
