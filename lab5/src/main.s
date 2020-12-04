@@ -320,7 +320,7 @@ TIM7_IRQHandler:
 	movs r1, #7
 	ands r0, r1 // r0 = (offset + 1) & 0x7
 	ldr r1, =offset
-	str r0, [r1] // offset = (offset = 1) & 0x7
+	str r0, [r1] // offset = (offset + 1) & 0x7
 	bl set_row
 	// Student code goes above
 	pop  {pc}

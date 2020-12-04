@@ -26,6 +26,7 @@
 "src/bounce.o"
 "src/lcd.o"
 "src/paddle.o"
+"src/paddle2.o"
 "src/syscalls.o"
 "src/system_stm32f0xx.o"
 "startup/startup_stm32.o"

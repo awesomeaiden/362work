@@ -1,11 +1,11 @@
-/* GIMP RGB C-Source image dump (paddle.c) */
+/* GIMP RGB C-Source image dump (paddle2.c) */
 
 const struct {
-  unsigned int 	 width;
-  unsigned int 	 height;
-  unsigned int 	 bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
-  unsigned char	 pixel_data[59 * 5 * 2 + 1];
-} paddle = {
+  unsigned int   width;
+  unsigned int   height;
+  unsigned int   bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */
+  unsigned char  pixel_data[59 * 5 * 2 + 1];
+} paddle2 = {
   59, 5, 2,
   "\262_\262_\262_\262_\262_"
   "\262_\262_\262_\262_\262_"

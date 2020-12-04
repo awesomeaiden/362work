@@ -9,6 +9,7 @@ C_SRCS += \
 ../src/bounce.c \
 ../src/lcd.c \
 ../src/paddle.c \
+../src/paddle2.c \
 ../src/syscalls.c \
 ../src/system_stm32f0xx.c 
 
@@ -18,6 +19,7 @@ OBJS += \
 ./src/bounce.o \
 ./src/lcd.o \
 ./src/paddle.o \
+./src/paddle2.o \
 ./src/syscalls.o \
 ./src/system_stm32f0xx.o 
 
@@ -27,6 +29,7 @@ C_DEPS += \
 ./src/bounce.d \
 ./src/lcd.d \
 ./src/paddle.d \
+./src/paddle2.d \
 ./src/syscalls.d \
 ./src/system_stm32f0xx.d 
 
